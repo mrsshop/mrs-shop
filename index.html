@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MRS SHOP</title>
+<style>
+  :root { --ink:#1d2320; --muted:#667069; --line:#e3e6df; --bg:#f6f7f2; --card:#fff; --accent:#1f5e4b; --danger:#b3261e; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--ink); }
+  button, input, textarea { font-family: inherit; }
+  header { background: var(--accent); color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; }
+  header h1 { font-size: 22px; cursor: pointer; font-weight: normal; }
+  .hbtn { background: #fff; color: var(--accent); border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+  main { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
+  .card img, .noimg { width: 100%; height: 280px; object-fit: cover; background: #e6e9e1; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+  .info { padding: 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .info p { font-size: 14px; color: var(--muted); flex: 1; line-height: 1.4; }
+  .price { font-weight: bold; font-size: 18px; }
+  .btn { background: var(--accent); color: #fff; border: none; padding: 10px 14px; border-radius: 4px; cursor: pointer; font-size: 15px; }
+  .btn:hover { opacity: .9; }
+  .hidden { display: none !important; }
+  .box { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 20px; margin-bottom: 20px; }
+  h2 { font-weight: normal; font-size: 20px; margin-bottom: 12px; }
+  .cart-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .cart-item img, .cart-item .noimg { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; font-size: 10px; }
+  .cart-item .name { flex: 1; min-width: 120px; }
+  .qty button { width: 28px; height: 28px; cursor: pointer; }
+  .remove { background: none; border: none; color: var(--danger); cursor: pointer; }
+  .total { text-align: right; font-size: 18px; font-weight: bold; margin-top: 12px; }
+  label { display: block; margin: 12px 0 4px; font-size: 14px; }
+  input[type=text], input[type=tel], textarea { width: 100%; padding: 10px; border: 1px solid #c9cec4; border-radius: 4px; font-size: 15px; }
+  .wide { width: 100%; margin-top: 16px; padding: 12px; font-size: 16px; }
+  .back { display: inline-block; background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 14px 26px; margin-bottom: 20px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.18); transition: transform .15s, box-shadow .15s; }
+  .back:hover { transform: translateY(-2px); box-shadow: 0 5px 12px rgba(0,0,0,.25); }
+  .success { text-align: center; padding: 40px 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 onclick="showPage('shop')">MRS SHOP</h1>
+  <button class="hbtn" onclick="showPage('order')">Cart (<span id="cartCount">0</span>)</button>
+</header>
+
+<main>
+  <!-- SHOP -->
+  <section id="shopPage">
+    <div class="grid" id="productGrid"></div>
+  </section>
+
+  <!-- ORDER -->
+  <section id="orderPage" class="hidden">
+    <button class="back" onclick="showPage('shop')">← Shopping e fire jan</button>
+    <div id="orderContent">
+      <div class="box">
+        <h2>Apnar Cart</h2>
+        <div id="cartItems"></div>
+        <div class="total" id="cartTotal"></div>
+      </div>
+      <div class="box" id="formBox">
+        <h2>Order Confirm Korun</h2>
+        <form id="orderForm">
+          <label>Apnar Nam</label>
+          <input type="text" id="custName" required>
+          <label>Phone Number</label>
+          <input type="tel" id="custPhone" required inputmode="numeric" placeholder="01XXXXXXXXX" maxlength="20">
+          <label>Thikana (Address)</label>
+          <textarea id="custAddress" rows="3" required></textarea>
+          <button type="submit" class="btn wide">Order Confirm Korun</button>
+        </form>
+      </div>
+    </div>
+    <div id="successBox" class="box success hidden">
+      <h2>✅ Apnar order submit hoyeche!</h2>
+      <p style="margin:12px 0">Amra shiggroi apnar sathe jogajog korbo. Dhonnobad!</p>
+      <button class="btn" onclick="showPage('shop')">Abar Shopping Korun</button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ================= SETTINGS ================= */
+const CURRENCY = "৳";
+const WHATSAPP_NUMBER = "8801XXXXXXXXX"; // nijer WhatsApp number (country code shoho, + chara)
+
+/* ================= PRODUCT LIST =================
+   Product edit korte: nam, price, description, image bodlan.
+   Notun product add korte: ekta { ... }, block copy kore niche boshan,
+   ar id te notun number din (4, 5, 6...). Prottek id alada hote hobe.
+   Photo gulo "images" folder e rakhun, ar nam hubohu mil rakhun.
+================================================== */
+const products = [
+  {
+    id: 1,
+    name: "Man T-Shirt",
+    price: 1200,
+    image: "images/tshirt.png",
+    description: "Soft cotton er comfortable man t-shirt."
+  },
+  {
+    id: 2,
+    name: "Product 2",
+    price: 200,
+    image: "images/product2.jpg",
+    description: "Ekhane product er description likhun."
+  },
+  {
+    id: 3,
+    name: "Product 3",
+    price: 300,
+    image: "images/product3.jpg",
+    description: "Ekhane product er description likhun."
+  }
+];
+/* ============================================== */
+
+let cart = [];
+try { cart = JSON.parse(localStorage.getItem("cart")) || []; } catch (e) { cart = []; }
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function imgTag(p) {
+  return `<img src="${esc(p.image)}" alt="${esc(p.name)}" onerror="this.outerHTML='<div class=noimg>Photo nei</div>'">`;
+}
+
+/* ---------- SHOP ---------- */
+function renderProducts() {
+  document.getElementById("productGrid").innerHTML = products.map(p => `
+    <div class="card">
+      ${imgTag(p)}
+      <div class="info">
+        <h3>${esc(p.name)}</h3>
+        <p>${esc(p.description || "")}</p>
+        <div class="price">${CURRENCY}${esc(p.price)}</div>
+        <button class="btn" onclick="addToCart(${p.id})">Add to Cart</button>
+      </div>
+    </div>`).join("");
+}
+
+function saveCart() {
+  try { localStorage.setItem("cart", JSON.stringify(cart)); } catch (e) {}
+  document.getElementById("cartCount").textContent = cart.reduce((s, i) => s + i.qty, 0);
+}
+function addToCart(id) {
+  const item = cart.find(i => i.id === id);
+  if (item) item.qty++; else cart.push({ id, qty: 1 });
+  saveCart();
+  showPage("order");
+}
+function changeQty(id, d) {
+  const item = cart.find(i => i.id === id);
+  if (!item) return;
+  item.qty += d;
+  if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
+  saveCart(); renderCart();
+}
+function removeItem(id) { cart = cart.filter(i => i.id !== id); saveCart(); renderCart(); }
+function cartTotal() {
+  return cart.reduce((s, i) => { const p = products.find(x => x.id === i.id); return s + (p ? p.price * i.qty : 0); }, 0);
+}
+function renderCart() {
+  cart = cart.filter(i => products.some(p => p.id === i.id)); // list theke muche dewa product bad
+  saveCart();
+  const box = document.getElementById("cartItems");
+  if (cart.length === 0) {
+    box.innerHTML = "<p>Apnar cart khali.</p>";
+    document.getElementById("cartTotal").textContent = "";
+    document.getElementById("formBox").classList.add("hidden");
+    return;
+  }
+  document.getElementById("formBox").classList.remove("hidden");
+  box.innerHTML = cart.map(i => {
+    const p = products.find(x => x.id === i.id);
+    return `
+      <div class="cart-item">
+        ${imgTag(p)}
+        <div class="name">${esc(p.name)}<br><small>${CURRENCY}${esc(p.price)}</small></div>
+        <div class="qty">
+          <button onclick="changeQty(${p.id}, -1)">-</button>
+          <span> ${i.qty} </span>
+          <button onclick="changeQty(${p.id}, 1)">+</button>
+        </div>
+        <button class="remove" onclick="removeItem(${p.id})">Remove</button>
+      </div>`;
+  }).join("");
+  document.getElementById("cartTotal").textContent = "Total: " + CURRENCY + cartTotal();
+}
+
+function showPage(page) {
+  document.getElementById("shopPage").classList.toggle("hidden", page !== "shop");
+  document.getElementById("orderPage").classList.toggle("hidden", page !== "order");
+  if (page === "shop") renderProducts();
+  if (page === "order") {
+    document.getElementById("orderContent").classList.remove("hidden");
+    document.getElementById("successBox").classList.add("hidden");
+    renderCart();
+  }
+  window.scrollTo(0, 0);
+}
+
+document.getElementById("orderForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  const name = document.getElementById("custName").value.trim();
+  let phone = document.getElementById("custPhone").value.trim();
+  phone = phone.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d)).replace(/[\s\-()]/g, "");
+  if (!/^(\+?88)?01[3-9][0-9]{8}$/.test(phone)) {
+    alert("Sothik 11 digit er phone number din (jemon 01712345678).");
+    return;
+  }
+  const address = document.getElementById("custAddress").value.trim();
+  let msg = "Notun Order!\n\nNam: " + name + "\nPhone: " + phone + "\nThikana: " + address + "\n\nProduct:\n";
+  cart.forEach(i => {
+    const p = products.find(x => x.id === i.id);
+    if (p) msg += "- " + p.name + " x" + i.qty + " = " + CURRENCY + (p.price * i.qty) + "\n";
+  });
+  msg += "\nTotal: " + CURRENCY + cartTotal();
+  window.open("https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(msg), "_blank");
+  cart = []; saveCart();
+  this.reset();
+  document.getElementById("orderContent").classList.add("hidden");
+  document.getElementById("successBox").classList.remove("hidden");
+});
+
+document.getElementById("custPhone").addEventListener("input", function () {
+  this.value = this.value.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d));
+});
+
+renderProducts();
+saveCart();
+</script>
+</body>
+</html>
