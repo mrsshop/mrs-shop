@@ -139,7 +139,7 @@ function imgTag(p) {
   return `<img src="${esc(p.image)}" alt="${esc(p.name)}" onerror="this.outerHTML='<div class=noimg>Photo nei</div>'">`;
 }
 function soldLine(p) {
-  return p.sold > 0 ? `<div class="sold">🔥 ${esc(p.sold)} jon kinechen</div>` : "";
+  return p.sold > 0 ? `<div class="sold">🔥 ${esc(p.sold)} sold out</div>` : "";
 }
 
 /* ---------- SHOP ---------- */
