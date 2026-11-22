@@ -19,6 +19,7 @@
   .info { padding: 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
   .info p { font-size: 14px; color: var(--muted); flex: 1; line-height: 1.4; }
   .price { font-weight: bold; font-size: 18px; }
+  .sold { font-size: 14px; font-weight: bold; color: #c2410c; }
   .btn { background: var(--accent); color: #fff; border: none; padding: 10px 14px; border-radius: 4px; cursor: pointer; font-size: 15px; }
   .btn:hover { opacity: .9; }
   .hidden { display: none !important; }
@@ -88,9 +89,9 @@ const WHATSAPP_NUMBER = "8801727656589"; // nijer WhatsApp number (country code 
 
 /* ================= PRODUCT LIST =================
    Product edit korte: nam, price, description, image bodlan.
+   sold: koto ta bikri hoyeche (shotti number likhun, 0 hole dekhabe na).
    Notun product add korte: ekta { ... }, block copy kore niche boshan,
-   ar id te notun number din (4, 5, 6...). Prottek id alada hote hobe.
-   Photo gulo "images" folder e rakhun, ar nam hubohu mil rakhun.
+   ar id te notun number din (5, 6, 7...). Prottek id alada hote hobe.
 ================================================== */
 const products = [
   {
@@ -98,28 +99,32 @@ const products = [
     name: "Man T-Shirt",
     price: 600,
     image: "images.jpg",
-    description: "Soft cotton er comfortable man t-shirt."
+    description: "Soft cotton er comfortable man t-shirt.",
+    sold: 0
   },
   {
     id: 2,
     name: "By Owner",
-    price: 000,
+    price: 0,
     image: "shirt.jpeg",
-    description: "product not available."
+    description: "product not available.",
+    sold: 0
   },
   {
     id: 3,
     name: "Women T-Shirt",
     price: 800,
     image: "tshirt.jfif",
-    description: "Soft cotton er women t-shirt."
+    description: "Soft cotton er women t-shirt.",
+    sold: 0
   },
-   {
+  {
     id: 4,
     name: "nam nai",
     price: 0,
     image: "tshirt.png",
-    description: "not available."
+    description: "not available.",
+    sold: 0
   },
 ];
 /* ============================================== */
@@ -133,6 +138,9 @@ function esc(s) {
 function imgTag(p) {
   return `<img src="${esc(p.image)}" alt="${esc(p.name)}" onerror="this.outerHTML='<div class=noimg>Photo nei</div>'">`;
 }
+function soldLine(p) {
+  return p.sold > 0 ? `<div class="sold">🔥 ${esc(p.sold)} jon kinechen</div>` : "";
+}
 
 /* ---------- SHOP ---------- */
 function renderProducts() {
@@ -143,6 +151,7 @@ function renderProducts() {
         <h3>${esc(p.name)}</h3>
         <p>${esc(p.description || "")}</p>
         <div class="price">${CURRENCY}${esc(p.price)}</div>
+        ${soldLine(p)}
         <button class="btn" onclick="addToCart(${p.id})">Add to Cart</button>
       </div>
     </div>`).join("");
