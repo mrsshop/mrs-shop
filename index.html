@@ -16,6 +16,8 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
   .card img, .noimg { width: 100%; height: 280px; object-fit: cover; background: #e6e9e1; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+  .imgwrap { position: relative; cursor: zoom-in; }
+  .badge { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.65); color: #fff; font-size: 12px; padding: 4px 9px; border-radius: 12px; }
   .info { padding: 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
   .info p { font-size: 14px; color: var(--muted); flex: 1; line-height: 1.4; }
   .price { font-weight: bold; font-size: 18px; }
@@ -37,6 +39,21 @@
   .back { display: inline-block; background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 14px 26px; margin-bottom: 20px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.18); transition: transform .15s, box-shadow .15s; }
   .back:hover { transform: translateY(-2px); box-shadow: 0 5px 12px rgba(0,0,0,.25); }
   .success { text-align: center; padding: 40px 10px; }
+
+  /* ---- PHOTO VIEWER ---- */
+  .viewer { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 12px; }
+  .vbox { background: #fff; border-radius: 8px; width: 100%; max-width: 640px; max-height: 96vh; overflow-y: auto; padding: 14px; position: relative; }
+  .vclose { position: absolute; top: 8px; right: 8px; z-index: 2; width: 36px; height: 36px; border-radius: 50%; border: none; background: rgba(0,0,0,.65); color: #fff; font-size: 18px; cursor: pointer; }
+  .vmain { position: relative; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 6px; min-height: 200px; }
+  .vmain img { max-width: 100%; max-height: 60vh; object-fit: contain; display: block; }
+  .varrow { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(0,0,0,.55); color: #fff; font-size: 24px; line-height: 1; cursor: pointer; }
+  .varrow.l { left: 8px; }
+  .varrow.r { right: 8px; }
+  .vthumbs { display: flex; gap: 8px; margin: 10px 0; overflow-x: auto; }
+  .vthumbs img { width: 62px; height: 62px; object-fit: cover; border-radius: 4px; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; opacity: .7; }
+  .vthumbs img.on { border-color: var(--accent); opacity: 1; }
+  .vinfo h3 { font-size: 18px; margin-bottom: 4px; }
+  .vinfo p { font-size: 14px; color: var(--muted); line-height: 1.4; margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -82,25 +99,42 @@
   </section>
 </main>
 
+<!-- PHOTO VIEWER -->
+<div id="viewer" class="viewer hidden" onclick="closeViewer()">
+  <div class="vbox" onclick="event.stopPropagation()">
+    <button class="vclose" onclick="closeViewer()">✕</button>
+    <div class="vmain" id="vMain">
+      <button class="varrow l" id="vPrev" onclick="vMove(-1)">‹</button>
+      <img id="vImg" src="" alt="">
+      <button class="varrow r" id="vNext" onclick="vMove(1)">›</button>
+    </div>
+    <div class="vthumbs" id="vThumbs"></div>
+    <div class="vinfo" id="vInfo"></div>
+    <button class="btn wide" id="vAdd" style="margin-top:6px">Add to Cart</button>
+  </div>
+</div>
+
 <script>
 /* ================= SETTINGS ================= */
 const CURRENCY = "৳";
 const WHATSAPP_NUMBER = "8801727656589"; // nijer WhatsApp number (country code shoho, + chara)
 
 /* ================= PRODUCT LIST =================
-   Product edit korte: nam, price, description, image bodlan.
-   sold: koto ta bikri hoyeche (shotti number likhun, 0 hole dekhabe na).
-   Notun product add korte: ekta { ... }, block copy kore niche boshan,
-   ar id te notun number din (5, 6, 7...). Prottek id alada hote hobe.
+   Product edit korte: nam, price, description, photo bodlan.
+   Ekta photo hole:      image: "tshirt.png",
+   Ekadhik photo hole:   images: ["tshirt.png", "tshirt2.png", "tshirt3.png"],
+   (images dile image line lagbe na. Prothom photo ta card e dekhabe.)
+   sold: koto ta bikri hoyeche (0 hole dekhabe na).
+   Notun product add korte pura { ... }, block copy kore id bodlan.
 ================================================== */
 const products = [
   {
     id: 1,
     name: "Man T-Shirt",
     price: 600,
-    image: "images.jpg",
+    images: ["images.jpg"],   // aro photo dite: ["images.jpg", "images2.jpg", "images3.jpg"]
     description: "Soft cotton er comfortable man t-shirt.",
-    sold: 2
+    sold: 0
   },
   {
     id: 2,
@@ -116,7 +150,7 @@ const products = [
     price: 800,
     image: "tshirt.jfif",
     description: "Soft cotton er women t-shirt.",
-    sold: 1
+    sold: 0
   },
   {
     id: 4,
@@ -135,18 +169,26 @@ try { cart = JSON.parse(localStorage.getItem("cart")) || []; } catch (e) { cart 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
+function getImgs(p) {
+  return (p.images && p.images.length) ? p.images : [p.image];
+}
 function imgTag(p) {
-  return `<img src="${esc(p.image)}" alt="${esc(p.name)}" onerror="this.outerHTML='<div class=noimg>Photo nei</div>'">`;
+  return `<img src="${esc(getImgs(p)[0])}" alt="${esc(p.name)}" onerror="this.outerHTML='<div class=noimg>Photo nei</div>'">`;
 }
 function soldLine(p) {
-  return p.sold > 0 ? `<div class="sold">🔥 ${esc(p.sold)} sold out</div>` : "";
+  return p.sold > 0 ? `<div class="sold">🔥 ${esc(p.sold)} jon kinechen</div>` : "";
 }
 
 /* ---------- SHOP ---------- */
 function renderProducts() {
-  document.getElementById("productGrid").innerHTML = products.map(p => `
+  document.getElementById("productGrid").innerHTML = products.map(p => {
+    const n = getImgs(p).length;
+    return `
     <div class="card">
-      ${imgTag(p)}
+      <div class="imgwrap" onclick="openViewer(${p.id})">
+        ${imgTag(p)}
+        ${n > 1 ? `<span class="badge">📷 ${n} photo</span>` : ""}
+      </div>
       <div class="info">
         <h3>${esc(p.name)}</h3>
         <p>${esc(p.description || "")}</p>
@@ -154,9 +196,68 @@ function renderProducts() {
         ${soldLine(p)}
         <button class="btn" onclick="addToCart(${p.id})">Add to Cart</button>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 
+/* ---------- PHOTO VIEWER ---------- */
+let vProduct = null, vIndex = 0;
+
+function openViewer(id) {
+  vProduct = products.find(x => x.id === id);
+  if (!vProduct) return;
+  vIndex = 0;
+  document.getElementById("vAdd").onclick = function () { closeViewer(); addToCart(id); };
+  renderViewer();
+  document.getElementById("viewer").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+function closeViewer() {
+  document.getElementById("viewer").classList.add("hidden");
+  document.body.style.overflow = "";
+}
+function vMove(d) {
+  const n = getImgs(vProduct).length;
+  vIndex = (vIndex + d + n) % n;
+  renderViewer();
+}
+function vSet(i) { vIndex = i; renderViewer(); }
+function renderViewer() {
+  const imgs = getImgs(vProduct);
+  const img = document.getElementById("vImg");
+  img.src = imgs[vIndex];
+  img.alt = vProduct.name;
+  const many = imgs.length > 1;
+  document.getElementById("vPrev").classList.toggle("hidden", !many);
+  document.getElementById("vNext").classList.toggle("hidden", !many);
+  document.getElementById("vThumbs").innerHTML = many
+    ? imgs.map((src, i) => `<img src="${esc(src)}" class="${i === vIndex ? "on" : ""}" onclick="vSet(${i})" alt="">`).join("")
+    : "";
+  document.getElementById("vInfo").innerHTML = `
+    <h3>${esc(vProduct.name)}</h3>
+    <p>${esc(vProduct.description || "")}</p>
+    <div class="price">${CURRENCY}${esc(vProduct.price)}</div>`;
+}
+
+document.addEventListener("keydown", function (e) {
+  if (document.getElementById("viewer").classList.contains("hidden")) return;
+  if (e.key === "Escape") closeViewer();
+  if (e.key === "ArrowLeft" && getImgs(vProduct).length > 1) vMove(-1);
+  if (e.key === "ArrowRight" && getImgs(vProduct).length > 1) vMove(1);
+});
+
+/* phone e swipe */
+let touchX = null;
+const vMain = document.getElementById("vMain");
+vMain.addEventListener("touchstart", e => { touchX = e.touches[0].clientX; }, { passive: true });
+vMain.addEventListener("touchend", e => {
+  if (touchX === null || getImgs(vProduct).length < 2) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 40) vMove(dx < 0 ? 1 : -1);
+  touchX = null;
+});
+
+/* ---------- CART ---------- */
 function saveCart() {
   try { localStorage.setItem("cart", JSON.stringify(cart)); } catch (e) {}
   document.getElementById("cartCount").textContent = cart.reduce((s, i) => s + i.qty, 0);
@@ -218,6 +319,7 @@ function showPage(page) {
   window.scrollTo(0, 0);
 }
 
+/* ---------- ORDER ---------- */
 document.getElementById("orderForm").addEventListener("submit", function (e) {
   e.preventDefault();
   const name = document.getElementById("custName").value.trim();
